@@ -1,12 +1,12 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 22
-    buildToolsVersion "22.0.1"
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
 
     defaultConfig {
         minSdkVersion 17
-        targetSdkVersion 22
+        targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
     }
@@ -31,8 +31,6 @@ android.libraryVariants.all { variant ->
 }
 
 dependencies {
-    compile 'com.android.support:recyclerview-v7:22.2.0'
-    compile 'com.android.support:leanback-v17:22.2.0'
+    compile "com.android.support:recyclerview-v7:${supportLibsVersion}"
+    compile "com.android.support:leanback-v17:${supportLibsVersion}"
 }
-
-apply from: '../config/bintray.gradle'
