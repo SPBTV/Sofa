@@ -46,7 +46,7 @@ public class HeadersSupportFragment extends BaseRowSupportFragment {
         void onHeaderClicked();
     }
 
-    interface OnHeaderViewSelectedListener {
+    public interface OnHeaderViewSelectedListener {
         void onHeaderSelected(RowHeaderPresenter.ViewHolder viewHolder, Row row);
     }
 

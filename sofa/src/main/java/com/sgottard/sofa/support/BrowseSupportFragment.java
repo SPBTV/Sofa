@@ -213,7 +213,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
 
     private ContentFragment mCurrentFragment;
     private RowsSupportFragment mRowsSupportFragment;
-    private HeadersSupportFragment mHeadersSupportFragment;
+    protected HeadersSupportFragment mHeadersSupportFragment;
 
     private ObjectAdapter mAdapter;
 
@@ -231,7 +231,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     private boolean mRowScaleEnabled = true;
     private OnItemViewSelectedListener mExternalOnItemViewSelectedListener;
     private OnItemViewClickedListener mOnItemViewClickedListener;
-    private int mSelectedPosition = -1;
+    protected int mSelectedPosition = -1;
 
     private PresenterSelector mHeaderPresenterSelector;
     private final SetSelectionRunnable mSetSelectionRunnable = new SetSelectionRunnable();
@@ -798,7 +798,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         containerList.setLayoutParams(lp);
     }
 
-    private void showHeaders(boolean show) {
+    protected void showHeaders(boolean show) {
         if (DEBUG) Log.v(TAG, "showHeaders " + show);
         mHeadersSupportFragment.setHeadersEnabled(show);
         setHeadersOnScreen(show);
@@ -836,7 +836,9 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             if (mRowsSupportFragment != null) {
                 position = mRowsSupportFragment.getVerticalGridView().getSelectedPosition();
                 onRowSelected(position);
-            } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
+            } else if (mCurrentFragment != null
+                    && mCurrentFragment instanceof RowsSupportFragment
+                    && ((RowsSupportFragment) mCurrentFragment).getVerticalGridView() != null) {
                 position = ((RowsSupportFragment) mCurrentFragment).getVerticalGridView().getSelectedPosition();
                 toggleTitle();
             }
@@ -877,7 +879,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         }
     };
 
-    private void onRowSelected(int position) {
+    public void onRowSelected(int position) {
         if (position != mSelectedPosition) {
             mSetSelectionRunnable.post(
                     position, SetSelectionRunnable.TYPE_INTERNAL_SYNC, true);
@@ -919,7 +921,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             mRowsSupportFragment.setWindowAlignmentFromTop(mContainerListAlignTop);
             mRowsSupportFragment.setItemAlignment();
             mRowsSupportFragment.setScalePivots(0, mContainerListAlignTop);
-        } else if (mCurrentFragment instanceof RowsSupportFragment) {
+        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment && !(
+                (RowsSupportFragment) mCurrentFragment).isAdded()) {
             ((RowsSupportFragment) mCurrentFragment).setWindowAlignmentFromTop(mContainerListAlignTop);
             ((RowsSupportFragment) mCurrentFragment).setItemAlignment();
             ((RowsSupportFragment) mCurrentFragment).setScalePivots(0, mContainerListAlignTop);
@@ -934,7 +937,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         } else if (!mCanShowHeaders || !mShowingHeaders) {
             if (mRowsSupportFragment!= null && mRowsSupportFragment.getView() != null) {
                 mRowsSupportFragment.getView().requestFocus();
-            } else if (mCurrentFragment != null) {
+            } else if (mCurrentFragment != null && mCurrentFragment.getFocusRootView() != null) {
                 mCurrentFragment.getFocusRootView().requestFocus();
             }
         }
@@ -1086,7 +1089,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         showTitle(show);
     }
 
-    private void toggleTitle() {
+    public void toggleTitle() {
         int headersPosition = mHeadersSupportFragment.getVerticalGridView().getSelectedPosition();
         headersPosition = headersPosition < 0 ? 0 : headersPosition;
         int rowsPosition = 0;
