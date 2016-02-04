@@ -872,12 +872,16 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                         ((RowsSupportFragment) nextFragment).setOnItemViewClickedListener(mOnItemViewClickedListener);
                     }
                     showHeaders(mShowingHeaders);
+                    onMainHeaderSelected(position);
                 }
             } else {
                 onRowSelected(position);
             }
         }
     };
+
+    public void onMainHeaderSelected(int position) {
+    }
 
     public void onRowSelected(int position) {
         if (position != mSelectedPosition) {
@@ -1090,6 +1094,9 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     }
 
     public void toggleTitle() {
+        if (mHeadersSupportFragment == null
+                || mHeadersSupportFragment.getVerticalGridView() == null)
+            return;
         int headersPosition = mHeadersSupportFragment.getVerticalGridView().getSelectedPosition();
         headersPosition = headersPosition < 0 ? 0 : headersPosition;
         int rowsPosition = 0;

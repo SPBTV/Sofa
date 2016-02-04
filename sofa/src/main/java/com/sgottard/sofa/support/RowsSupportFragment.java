@@ -27,8 +27,10 @@ import android.support.v17.leanback.widget.Presenter;
 import android.support.v17.leanback.widget.RowPresenter;
 import android.support.v17.leanback.widget.ScaleFrameLayout;
 import android.support.v17.leanback.widget.VerticalGridView;
+import android.support.v4.view.KeyEventCompat;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -319,8 +321,10 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
     void setScalePivots(float pivotX, float pivotY) {
         // set pivot on ScaleFrameLayout, it will be propagated to its child VerticalGridView
         // where we actually change scale.
-        mScaleFrameLayout.setPivotX(pivotX);
-        mScaleFrameLayout.setPivotY(pivotY);
+        if (mScaleFrameLayout != null) {
+            mScaleFrameLayout.setPivotX(pivotX);
+            mScaleFrameLayout.setPivotY(pivotY);
+        }
     }
 
     private static void setRowViewExpanded(ItemBridgeAdapter.ViewHolder vh, boolean expanded) {
