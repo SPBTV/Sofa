@@ -506,8 +506,10 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                         return mRowsSupportFragment.getVerticalGridView();
                     } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
                         return ((RowsSupportFragment) mCurrentFragment).getVerticalGridView();
-                    } else {
+                    } else if (mCurrentFragment != null) {
                         return mCurrentFragment.getFocusRootView();
+                    } else {
+                        return null;
                     }
                 }
             }
@@ -528,8 +530,10 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                     return mRowsSupportFragment.getVerticalGridView();
                 } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
                     return ((RowsSupportFragment) mCurrentFragment).getVerticalGridView();
-                } else {
+                } else if (mCurrentFragment != null) {
                     return mCurrentFragment.getFocusRootView();
+                } else {
+                    return null;
                 }
             } else {
                 return null;
@@ -817,12 +821,14 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 if (!mCanShowHeaders || !mShowingHeaders || isInHeadersTransition()) {
                     return;
                 }
-                startHeadersTransitionInternal(false);
                 if (mRowsSupportFragment != null) {
+                    startHeadersTransitionInternal(false);
                     mRowsSupportFragment.getVerticalGridView().requestFocus();
                 } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
+                    startHeadersTransitionInternal(false);
                     ((RowsSupportFragment) mCurrentFragment).getVerticalGridView().requestFocus();
-                } else {
+                } else if (mCurrentFragment != null && mCurrentFragment.getFocusRootView() != null) {
+                    startHeadersTransitionInternal(false);
                     mCurrentFragment.getFocusRootView().requestFocus();
                 }
             }
