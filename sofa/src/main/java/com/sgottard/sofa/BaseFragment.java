@@ -23,6 +23,7 @@ public class BaseFragment extends BrandedFragment {
 
     private boolean mEntranceTransitionEnabled = false;
     private boolean mStartEntranceTransitionPending = false;
+    private boolean mEntranceTransitionPreparePending = false;
     private Object mEntranceTransition;
 
     static TransitionHelper sTransitionHelper = TransitionHelper.getInstance();
@@ -30,6 +31,10 @@ public class BaseFragment extends BrandedFragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        if (mEntranceTransitionPreparePending) {
+            mEntranceTransitionPreparePending = false;
+            onEntranceTransitionPrepare();
+        }
         if (mStartEntranceTransitionPending) {
             mStartEntranceTransitionPending = false;
             startEntranceTransition();
@@ -65,6 +70,11 @@ public class BaseFragment extends BrandedFragment {
     public void prepareEntranceTransition() {
         if (TransitionHelper.systemSupportsEntranceTransitions()) {
             mEntranceTransitionEnabled = true;
+            if (getView() == null) {
+                mEntranceTransitionPreparePending = true;
+                return;
+            }
+            onEntranceTransitionPrepare();
         }
     }
 
@@ -95,7 +105,15 @@ public class BaseFragment extends BrandedFragment {
     }
 
     /**
-     * Callback when entrance transition is started.
+     * Callback when entrance transition is prepared.  This is when fragment should
+     * stop user input and animations.
+     */
+    protected void onEntranceTransitionPrepare() {
+    }
+
+    /**
+     * Callback when entrance transition is started.  This is when fragment should
+     * stop processing layout.
      */
     protected void onEntranceTransitionStart() {
     }
@@ -126,6 +144,10 @@ public class BaseFragment extends BrandedFragment {
             mStartEntranceTransitionPending = true;
             return;
         }
+        if (mEntranceTransitionPreparePending) {
+            mEntranceTransitionPreparePending = false;
+            onEntranceTransitionPrepare();
+        }
         // wait till views get their initial position before start transition
         final View view = getView();
         view.getViewTreeObserver().addOnPreDrawListener(
@@ -135,7 +157,10 @@ public class BaseFragment extends BrandedFragment {
                 view.getViewTreeObserver().removeOnPreDrawListener(this);
                 internalCreateEntranceTransition();
                 mEntranceTransitionEnabled = false;
+                if (mEntranceTransition != null) {
+                    onEntranceTransitionStart();
                 runEntranceTransition(mEntranceTransition);
+                }
                 return false;
             }
         });
@@ -148,10 +173,6 @@ public class BaseFragment extends BrandedFragment {
             return;
         }
         sTransitionHelper.setTransitionListener(mEntranceTransition, new TransitionListener() {
-            @Override
-            public void onTransitionStart(Object transition) {
-                onEntranceTransitionStart();
-            }
             @Override
             public void onTransitionEnd(Object transition) {
                 mEntranceTransition = null;

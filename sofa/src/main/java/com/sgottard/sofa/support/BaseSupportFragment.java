@@ -24,7 +24,7 @@ import android.view.ViewTreeObserver;
 /**
  * @hide
  */
-class BaseSupportFragment extends BrandedSupportFragment {
+public class BaseSupportFragment extends BrandedSupportFragment {
 
     private boolean mEntranceTransitionEnabled = false;
     private boolean mStartEntranceTransitionPending = false;

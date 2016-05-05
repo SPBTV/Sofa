@@ -7,6 +7,7 @@ import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.support.annotation.ColorInt;
 import android.support.v17.leanback.transition.TransitionListener;
 import android.support.v17.leanback.widget.BrowseFrameLayout;
 import android.support.v17.leanback.widget.HorizontalGridView;
@@ -255,7 +256,7 @@ public class BrowseFragment extends BaseFragment {
      *
      * @param color The color to use as the brand color of the fragment.
      */
-    public void setBrandColor(int color) {
+    public void setBrandColor(@ColorInt int color) {
         mBrandColor = color;
         mBrandColorSet = true;
 
@@ -268,6 +269,7 @@ public class BrowseFragment extends BaseFragment {
      * Returns the brand color for the browse fragment.
      * The default is transparent.
      */
+    @ColorInt
     public int getBrandColor() {
         return mBrandColor;
     }
@@ -416,6 +418,7 @@ public class BrowseFragment extends BaseFragment {
         Runnable transitionRunnable = new Runnable() {
             @Override
             public void run() {
+                mHeadersFragment.onTransitionPrepare();
                 mHeadersFragment.onTransitionStart();
                 createHeadersTransition();
                 if (mBrowseTransitionListener != null) {
@@ -842,6 +845,7 @@ public class BrowseFragment extends BaseFragment {
                         FragmentManager cfManager = getChildFragmentManager();
                         Fragment foundFragment = cfManager.findFragmentById(R.id.browse_container_dock);
                         if (foundFragment == null || (foundFragment instanceof ContentFragment && !foundFragment.equals(nextFragment))) {
+                            mCurrentFragment = null;
                             FragmentTransaction transaction = cfManager.beginTransaction();
                             transaction.replace(R.id.browse_container_dock, (Fragment) nextFragment, nextFragment.getTag());
                             transaction.commit();
@@ -1020,6 +1024,16 @@ public class BrowseFragment extends BaseFragment {
     }
 
     @Override
+    protected void onEntranceTransitionPrepare() {
+        mHeadersFragment.onTransitionPrepare();
+        if (mRowsFragment != null) {
+            mRowsFragment.onTransitionPrepare();
+        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsFragment) {
+            ((RowsFragment) mCurrentFragment).onTransitionPrepare();
+        }
+    }
+
+    @Override
     protected void onEntranceTransitionStart() {
         mHeadersFragment.onTransitionStart();
         if (mRowsFragment != null) {
@@ -1034,7 +1048,7 @@ public class BrowseFragment extends BaseFragment {
         if (mRowsFragment != null) {
             mRowsFragment.onTransitionEnd();
         } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsFragment) {
-            ((RowsFragment) mCurrentFragment).onTransitionStart();
+            ((RowsFragment) mCurrentFragment).onTransitionEnd();
         }
         mHeadersFragment.onTransitionEnd();
     }

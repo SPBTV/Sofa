@@ -376,7 +376,7 @@ public class RowsFragment extends BaseRowFragment implements ContentFragment {
         @Override
         public void onDetachedFromWindow(ItemBridgeAdapter.ViewHolder vh) {
             if (mSelectedViewHolder == vh) {
-//                setRowViewSelected(mSelectedViewHolder, false, true);
+                setRowViewSelected(mSelectedViewHolder, false, true);
                 mSelectedViewHolder = null;
             }
             if (mExternalAdapterListener != null) {
@@ -391,7 +391,7 @@ public class RowsFragment extends BaseRowFragment implements ContentFragment {
         }
         @Override
         public void onUnbind(ItemBridgeAdapter.ViewHolder vh) {
-//            setRowViewSelected(vh, false, true);
+            setRowViewSelected(vh, false, true);
             if (mExternalAdapterListener != null) {
                 mExternalAdapterListener.onUnbind(vh);
             }
@@ -434,10 +434,12 @@ public class RowsFragment extends BaseRowFragment implements ContentFragment {
     }
 
     @Override
-    void onTransitionStart() {
-        super.onTransitionStart();
-        mInTransition = true;
-        freezeRows(true);
+    boolean onTransitionPrepare() {
+        boolean prepared = super.onTransitionPrepare();
+        if (prepared) {
+            freezeRows(true);
+        }
+        return prepared;
     }
 
     class ExpandPreLayout implements ViewTreeObserver.OnPreDrawListener {
@@ -463,6 +465,10 @@ public class RowsFragment extends BaseRowFragment implements ContentFragment {
 
         @Override
         public boolean onPreDraw() {
+            if (getView() == null || getActivity() == null) {
+                mVerticalView.getViewTreeObserver().removeOnPreDrawListener(this);
+                return true;
+            }
             if (mState == STATE_INIT) {
                 setExpand(true);
                 mState = STATE_FIRST_DRAW;
@@ -476,6 +482,7 @@ public class RowsFragment extends BaseRowFragment implements ContentFragment {
     }
 
     void onExpandTransitionStart(boolean expand, final Runnable callback) {
+        onTransitionPrepare();
         onTransitionStart();
         if (expand) {
             callback.run();
@@ -522,7 +529,6 @@ public class RowsFragment extends BaseRowFragment implements ContentFragment {
     @Override
     void onTransitionEnd() {
         super.onTransitionEnd();
-        mInTransition = false;
         freezeRows(false);
     }
 

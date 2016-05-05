@@ -124,7 +124,6 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
     private int mAlignedTop;
     private boolean mRowScaleEnabled;
     private ScaleFrameLayout mScaleFrameLayout;
-    private boolean mInTransition;
     private boolean mAfterEntranceTransition = true;
     private int extraMarginTop;
     private int extraMarginLeft;
@@ -443,10 +442,12 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
     }
 
     @Override
-    void onTransitionStart() {
-        super.onTransitionStart();
-        mInTransition = true;
-        freezeRows(true);
+    boolean onTransitionPrepare() {
+        boolean prepared = super.onTransitionPrepare();
+        if (prepared) {
+            freezeRows(true);
+        }
+        return prepared;
     }
 
     class ExpandPreLayout implements ViewTreeObserver.OnPreDrawListener {
@@ -472,6 +473,10 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
 
         @Override
         public boolean onPreDraw() {
+            if (getView() == null || getActivity() == null) {
+                mVerticalView.getViewTreeObserver().removeOnPreDrawListener(this);
+                return true;
+            }
             if (mState == STATE_INIT) {
                 setExpand(true);
                 mState = STATE_FIRST_DRAW;
@@ -485,6 +490,7 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
     }
 
     void onExpandTransitionStart(boolean expand, final Runnable callback) {
+        onTransitionPrepare();
         onTransitionStart();
         if (expand) {
             callback.run();
@@ -531,7 +537,6 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
     @Override
     void onTransitionEnd() {
         super.onTransitionEnd();
-        mInTransition = false;
         freezeRows(false);
     }
 
