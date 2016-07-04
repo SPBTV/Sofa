@@ -876,6 +876,11 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                     if (nextFragment instanceof RowsSupportFragment) {
                         ((RowsSupportFragment) nextFragment).setOnItemViewSelectedListener(mRowViewSelectedListener);
                         ((RowsSupportFragment) nextFragment).setOnItemViewClickedListener(mOnItemViewClickedListener);
+                    } else if (nextFragment instanceof VerticalGridSupportFragment) {
+                        ((VerticalGridSupportFragment) nextFragment).setOnItemViewSelectedListener(
+                                mRowViewSelectedListener);
+                        ((VerticalGridSupportFragment) nextFragment).setOnItemViewClickedListener(
+                                mOnItemViewClickedListener);
                     }
                     showHeaders(mShowingHeaders);
                     onMainHeaderSelected(position);
