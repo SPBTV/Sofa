@@ -4,6 +4,7 @@ import com.sgottard.sofa.ContentFragment;
 import com.sgottard.sofa.R;
 
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v17.leanback.transition.TransitionHelper;
 import android.support.v17.leanback.widget.BrowseFrameLayout;
 import android.support.v17.leanback.widget.ObjectAdapter;
@@ -15,6 +16,7 @@ import android.support.v17.leanback.widget.Row;
 import android.support.v17.leanback.widget.RowPresenter;
 import android.support.v17.leanback.widget.TitleView;
 import android.support.v17.leanback.widget.VerticalGridPresenter;
+import android.support.v17.leanback.widget.VerticalGridView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -54,7 +56,7 @@ public class VerticalGridSupportFragment extends BaseSupportFragment implements 
     private final OnChildLaidOutListener mChildLaidOutListener = new OnChildLaidOutListener() {
         @Override
         public void onChildLaidOut(ViewGroup parent, View view, int position, long id) {
-            if (position == 0) {
+            if (position == 0 && !isAttachedToBrowseFragment()) {
                 showOrHideTitle();
             }
         }
@@ -106,8 +108,20 @@ public class VerticalGridSupportFragment extends BaseSupportFragment implements 
     private void gridOnItemSelected(int position) {
         if (position != mSelectedPosition) {
             mSelectedPosition = position;
-            showOrHideTitle();
+            if (!isAttachedToBrowseFragment())
+                showOrHideTitle();
         }
+    }
+
+    @Nullable
+    public VerticalGridView getVerticalGridView() {
+        return mGridViewHolder == null ? null : mGridViewHolder.getGridView();
+    }
+
+    public int getSelectedRow() {
+        return (mGridViewHolder == null || mGridPresenter == null) ? 0
+                : mGridViewHolder.getGridView().getSelectedPosition()
+                        / mGridPresenter.getNumberOfColumns();
     }
 
     private void showOrHideTitle() {
@@ -139,12 +153,17 @@ public class VerticalGridSupportFragment extends BaseSupportFragment implements 
         return mOnItemViewClickedListener;
     }
 
+    protected boolean isAttachedToBrowseFragment() {
+        return getParentFragment() != null && getParentFragment() instanceof BrowseSupportFragment;
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
         ViewGroup root = (ViewGroup) inflater.inflate(R.layout.lb_vertical_grid_fragment, container,
                 false);
-        setTitleView((TitleView) root.findViewById(R.id.browse_title_group));
+        setTitleView(isAttachedToBrowseFragment() ? null
+                : (TitleView) root.findViewById(R.id.browse_title_group));
         return root;
     }
 
@@ -169,7 +188,8 @@ public class VerticalGridSupportFragment extends BaseSupportFragment implements 
     private void setupFocusSearchListener() {
         BrowseFrameLayout browseFrameLayout = (BrowseFrameLayout) getView().findViewById(
                 R.id.grid_frame);
-        browseFrameLayout.setOnFocusSearchListener(getTitleHelper().getOnFocusSearchListener());
+        if (browseFrameLayout != null && getTitleHelper() != null)
+            browseFrameLayout.setOnFocusSearchListener(getTitleHelper().getOnFocusSearchListener());
     }
 
     @Override

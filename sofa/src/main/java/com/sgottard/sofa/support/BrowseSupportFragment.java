@@ -737,6 +737,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                         rowsGridView = mRowsSupportFragment.getVerticalGridView();
                     } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
                         rowsGridView = ((RowsSupportFragment) mCurrentFragment).getVerticalGridView();
+                    } else if (mCurrentFragment != null && mCurrentFragment instanceof VerticalGridSupportFragment) {
+                        rowsGridView = ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView();
                     }
                     if (rowsGridView != null && !rowsGridView.hasFocus()) {
                         rowsGridView.requestFocus();
@@ -846,6 +848,13 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                     && mCurrentFragment instanceof RowsSupportFragment
                     && ((RowsSupportFragment) mCurrentFragment).getVerticalGridView() != null) {
                 position = ((RowsSupportFragment) mCurrentFragment).getVerticalGridView().getSelectedPosition();
+                toggleTitle();
+            } else if (mCurrentFragment != null
+                    && mCurrentFragment instanceof VerticalGridSupportFragment
+                    && ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView()
+                    != null) {
+                position = ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView()
+                        .getSelectedPosition();
                 toggleTitle();
             }
             if (DEBUG) Log.v(TAG, "row selected position " + position);
@@ -1118,6 +1127,10 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 && ((RowsSupportFragment) mCurrentFragment).getVerticalGridView() != null) {
             rowsPosition = ((RowsSupportFragment) mCurrentFragment).getVerticalGridView()
                     .getSelectedPosition();
+        } else if (mCurrentFragment != null
+                && mCurrentFragment instanceof VerticalGridSupportFragment
+                && ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView() != null) {
+            rowsPosition = ((VerticalGridSupportFragment) mCurrentFragment).getSelectedRow();
         }
         if ((!mShowingHeaders && rowsPosition == 0) ||
                 (mShowingHeaders && headersPosition == 0)) {
