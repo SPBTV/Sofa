@@ -15,6 +15,9 @@
  */
 package com.sgottard.sofa.support;
 
+import com.sgottard.sofa.ContentFragment;
+import com.sgottard.sofa.R;
+
 import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.graphics.Rect;
@@ -44,10 +47,6 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.ViewGroup.MarginLayoutParams;
-
-import com.sgottard.sofa.ContentFragment;
-import com.sgottard.sofa.R;
-
 import static android.support.v7.widget.RecyclerView.NO_POSITION;
 
 /**
@@ -235,6 +234,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
 
     private PresenterSelector mHeaderPresenterSelector;
     private final SetSelectionRunnable mSetSelectionRunnable = new SetSelectionRunnable();
+    private final ToggleTitleRunnable mToggleTitleRunnable = new ToggleTitleRunnable();
 
     // transition related:
     private Object mSceneWithHeaders;
@@ -629,6 +629,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         if (mBackStackChangedListener != null) {
             getFragmentManager().removeOnBackStackChangedListener(mBackStackChangedListener);
         }
+        mBrowseFrame.removeCallbacks(mSetSelectionRunnable);
+        mBrowseFrame.removeCallbacks(mToggleTitleRunnable);
         super.onDestroy();
     }
 
@@ -716,6 +718,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         sTransitionHelper.setTransitionListener(mHeadersTransition, new TransitionListener() {
             @Override
             public void onTransitionStart(Object transition) {
+                mToggleTitleRunnable.post();
             }
             @Override
             public void onTransitionEnd(Object transition) {
@@ -744,7 +747,6 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                         rowsGridView.requestFocus();
                     }
                 }
-                toggleTitle();
 
                 if (mBrowseTransitionListener != null) {
                     mBrowseTransitionListener.onHeadersTransitionStop(mShowingHeaders);
@@ -780,8 +782,10 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 mCurrentFragment.setExtraMargin(mContainerListAlignTop, mContainerListMarginStart);
             } else {
                 lp = (ViewGroup.MarginLayoutParams) containerList.getLayoutParams();
-                lp.setMarginStart(alignLeft ? 0 : mContainerListMarginStart);
-                containerList.setLayoutParams(lp);
+                if (lp != null) {
+                    lp.setMarginStart(alignLeft ? 0 : mContainerListMarginStart);
+                    containerList.setLayoutParams(lp);
+                }
             }
         } else {
             containerList = mCurrentFragment.getView();
@@ -789,8 +793,10 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 mCurrentFragment.setExtraMargin(mContainerListAlignTop, mContainerListMarginStart);
             } else {
                 lp = (ViewGroup.MarginLayoutParams) containerList.getLayoutParams();
-                lp.setMarginStart(alignLeft ? 0 : mContainerListMarginStart);
-                containerList.setLayoutParams(lp);
+                if (lp != null) {
+                    lp.setMarginStart(alignLeft ? 0 : mContainerListMarginStart);
+                    containerList.setLayoutParams(lp);
+                }
             }
         }
     }
@@ -848,14 +854,14 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                     && mCurrentFragment instanceof RowsSupportFragment
                     && ((RowsSupportFragment) mCurrentFragment).getVerticalGridView() != null) {
                 position = ((RowsSupportFragment) mCurrentFragment).getVerticalGridView().getSelectedPosition();
-                toggleTitle();
+                mToggleTitleRunnable.post();
             } else if (mCurrentFragment != null
                     && mCurrentFragment instanceof VerticalGridSupportFragment
                     && ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView()
                     != null) {
                 position = ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView()
                         .getSelectedPosition();
-                toggleTitle();
+                mToggleTitleRunnable.post();
             }
             if (DEBUG) Log.v(TAG, "row selected position " + position);
             if (mExternalOnItemViewSelectedListener != null) {
@@ -907,7 +913,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         if (position != mSelectedPosition) {
             mSetSelectionRunnable.post(
                     position, SetSelectionRunnable.TYPE_INTERNAL_SYNC, true);
-            toggleTitle();
+            mToggleTitleRunnable.post();
         }
     }
 
@@ -1117,8 +1123,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         if (mHeadersSupportFragment == null
                 || mHeadersSupportFragment.getVerticalGridView() == null)
             return;
-        int headersPosition = mHeadersSupportFragment.getVerticalGridView().getSelectedPosition();
-        headersPosition = headersPosition < 0 ? 0 : headersPosition;
+        VerticalGridView headerVerticalGridView = mHeadersSupportFragment.getVerticalGridView();
         int rowsPosition = 0;
         if (mRowsSupportFragment != null && mRowsSupportFragment.getVerticalGridView() != null) {
             rowsPosition = mRowsSupportFragment.getVerticalGridView().getSelectedPosition();
@@ -1132,11 +1137,29 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 && ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView() != null) {
             rowsPosition = ((VerticalGridSupportFragment) mCurrentFragment).getSelectedRow();
         }
-        if ((!mShowingHeaders && rowsPosition == 0) ||
-                (mShowingHeaders && headersPosition == 0)) {
+        boolean isFirstChildIntersectWithTitle = getTitleView() != null
+                && headerVerticalGridView.getChildCount() != 0 &&
+                headerVerticalGridView.getChildAt(0).getTop() < getTitleView().getHeight();
+        if ((!mShowingHeaders && rowsPosition == 0) || (mShowingHeaders
+                && !isFirstChildIntersectWithTitle)) {
             showTitle(true);
         } else {
             showTitle(false);
+        }
+    }
+
+    private class ToggleTitleRunnable implements Runnable {
+
+        @Override
+        public void run() {
+            toggleTitle();
+        }
+
+        void post() {
+            if (mBrowseFrame != null) {
+                mBrowseFrame.removeCallbacks(this);
+                mBrowseFrame.postDelayed(this, 100);
+            }
         }
     }
 }

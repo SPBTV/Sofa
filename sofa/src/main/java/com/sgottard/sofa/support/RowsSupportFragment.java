@@ -273,9 +273,10 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
             ViewGroup.MarginLayoutParams lp;
             View content = getView();
             lp = (ViewGroup.MarginLayoutParams) content.getLayoutParams();
-            lp.setMarginStart(extraMarginLeft);
-            content.setLayoutParams(lp);
-
+            if (lp != null) {
+                lp.setMarginStart(extraMarginLeft);
+                content.setLayoutParams(lp);
+            }
             setExpand(mExpand);
         }
 
