@@ -884,6 +884,11 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 FragmentManager cfManager = getChildFragmentManager();
                 Fragment foundFragment = cfManager.findFragmentById(R.id.browse_container_dock);
                 if (foundFragment == null || (foundFragment instanceof ContentFragment && !foundFragment.equals(nextFragment))) {
+                    if (foundFragment instanceof RowsSupportFragment) {
+                        ((RowsSupportFragment) foundFragment).setSelectedPosition(0, false);
+                    } else if (foundFragment instanceof VerticalGridSupportFragment) {
+                        ((VerticalGridSupportFragment) foundFragment).setSelectedPosition(0);
+                    }
                     FragmentTransaction transaction = cfManager.beginTransaction();
                     transaction.replace(R.id.browse_container_dock, (Fragment) nextFragment, nextFragment.getTag());
                     transaction.commit();
@@ -1141,7 +1146,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 && headerVerticalGridView.getChildCount() != 0 &&
                 headerVerticalGridView.getChildAt(0).getTop() < getTitleView().getHeight();
         if ((!mShowingHeaders && rowsPosition == 0) || (mShowingHeaders
-                && !isFirstChildIntersectWithTitle)) {
+                && !isFirstChildIntersectWithTitle && rowsPosition == 0)) {
             showTitle(true);
         } else {
             showTitle(false);
