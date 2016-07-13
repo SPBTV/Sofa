@@ -34,10 +34,10 @@ public class BrandedSupportFragment extends Fragment {
     // BUNDLE attribute for title is showing
     private static final String TITLE_SHOW = "titleShow";
 
-    private boolean mShowingTitle = true;
+    protected boolean mShowingTitle = true;
     private String mTitle;
-    private Drawable mBadgeDrawable;
-    private TitleView mTitleView;
+    protected Drawable mBadgeDrawable;
+    protected TitleView mTitleView;
     private SearchOrbView.Colors mSearchAffordanceColors;
     private boolean mSearchAffordanceColorSet;
     private View.OnClickListener mExternalOnSearchClickedListener;

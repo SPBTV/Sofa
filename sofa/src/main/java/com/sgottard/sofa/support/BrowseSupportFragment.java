@@ -41,6 +41,7 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentManager.BackStackEntry;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.ViewCompat;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -78,6 +79,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     // BUNDLE attribute for saving header show/hide status when backstack is not used:
     static final String HEADER_SHOW = "headerShow";
 
+    private boolean mUseHeaderTitleWhenExpanded = false;
+    private String mOriginalTitle;
 
     final class BackStackListener implements FragmentManager.OnBackStackChangedListener {
         int mLastEntryCount;
@@ -1018,6 +1021,40 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         }
     }
 
+    @Override
+    public void setTitle(String title) {
+        super.setTitle(title);
+        mOriginalTitle = title;
+    }
+
+    public void setUseHeaderTitleWhenExpanded(boolean useHeaderTitleWhenExpanded) {
+        this.mUseHeaderTitleWhenExpanded = useHeaderTitleWhenExpanded;
+    }
+
+    void switchTitle() {
+        if (mShowingHeaders) {
+            if (mBadgeDrawable != null) {
+                mTitleView.setBadgeDrawable(mBadgeDrawable);
+                mTitleView.setTitle(null);
+            } else if (mTitleView != null) {
+                mTitleView.setTitle(mOriginalTitle);
+                mTitleView.setBadgeDrawable(null);
+            }
+        } else if (mHeadersSupportFragment != null
+                && mHeadersSupportFragment.getVerticalGridView() != null &&
+                mHeadersSupportFragment.getAdapter() != null) {
+            ListRow listRow = (ListRow) mHeadersSupportFragment.getAdapter()
+                    .get(mHeadersSupportFragment.getVerticalGridView().getSelectedPosition());
+            if (listRow.getHeaderItem() != null) {
+                String headerTitle = listRow.getHeaderItem().getName();
+                if (!TextUtils.isEmpty(headerTitle) && mTitleView != null) {
+                    mTitleView.setBadgeDrawable(null);
+                    mTitleView.setTitle(headerTitle);
+                }
+            }
+        }
+    }
+
     /**
      * Sets the state for the headers column in the browse fragment. Must be one
      * of {@link #HEADERS_ENABLED}, {@link #HEADERS_HIDDEN}, or
@@ -1158,6 +1195,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         @Override
         public void run() {
             toggleTitle();
+            if (mUseHeaderTitleWhenExpanded && mShowingTitle)
+                switchTitle();
         }
 
         void post() {
