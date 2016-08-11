@@ -124,6 +124,17 @@ public class VerticalGridSupportFragment extends BaseSupportFragment implements 
                         / mGridPresenter.getNumberOfColumns();
     }
 
+    public int getSelectedColumn() {
+        return (mGridViewHolder == null || mGridPresenter == null) ? 0
+                : mGridViewHolder.getGridView().getSelectedPosition()
+                        % mGridPresenter.getNumberOfColumns();
+    }
+
+    public int getFirstPositionInRow(int row) {
+        return (mGridViewHolder == null || mGridPresenter == null) ? 0
+                : row * mGridPresenter.getNumberOfColumns();
+    }
+
     private void showOrHideTitle() {
         if (mGridViewHolder.getGridView().findViewHolderForAdapterPosition(mSelectedPosition)
                 == null) {

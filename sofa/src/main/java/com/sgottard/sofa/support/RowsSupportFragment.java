@@ -20,17 +20,18 @@ import android.animation.TimeAnimator.TimeListener;
 import android.os.Bundle;
 import android.support.v17.leanback.widget.HorizontalGridView;
 import android.support.v17.leanback.widget.ItemBridgeAdapter;
-import android.support.v17.leanback.widget.ListRowPresenter;
 import android.support.v17.leanback.widget.OnItemViewClickedListener;
 import android.support.v17.leanback.widget.OnItemViewSelectedListener;
-import android.support.v17.leanback.widget.Presenter;
-import android.support.v17.leanback.widget.RowPresenter;
+import android.support.v17.leanback.widget.RowPresenter.ViewHolder;
 import android.support.v17.leanback.widget.ScaleFrameLayout;
 import android.support.v17.leanback.widget.VerticalGridView;
-import android.support.v4.view.KeyEventCompat;
+import android.support.v17.leanback.widget.ViewHolderTask;
+import android.support.v17.leanback.widget.HorizontalGridView;
+import android.support.v17.leanback.widget.RowPresenter;
+import android.support.v17.leanback.widget.ListRowPresenter;
+import android.support.v17.leanback.widget.Presenter;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -198,9 +199,7 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
                 View view = listView.getChildAt(i);
                 ItemBridgeAdapter.ViewHolder ibvh = (ItemBridgeAdapter.ViewHolder)
                         listView.getChildViewHolder(view);
-                RowPresenter rowPresenter = (RowPresenter) ibvh.getPresenter();
-                RowPresenter.ViewHolder vh = rowPresenter.getRowViewHolder(ibvh.getViewHolder());
-                vh.setOnItemViewSelectedListener(mOnItemViewSelectedListener);
+                getRowViewHolder(ibvh).setOnItemViewSelectedListener(mOnItemViewSelectedListener);
             }
         }
     }
@@ -236,6 +235,21 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
                 setRowViewSelected(mSelectedViewHolder, true, false);
             }
         }
+    }
+
+    /**
+     * Get row ViewHolder at adapter position.  Returns null if the row object is not in adapter or
+     * the row object has not been bound to a row view.
+     * @param position Position of row in adapter.
+     * @return Row ViewHolder at a given adapter position.
+     */
+    public RowPresenter.ViewHolder getRowViewHolder(int position) {
+        VerticalGridView verticalView = getVerticalGridView();
+        if (verticalView == null) {
+            return null;
+        }
+        return getRowViewHolder((ItemBridgeAdapter.ViewHolder)
+                verticalView.findViewHolderForAdapterPosition(position));
     }
 
     @Override
@@ -573,6 +587,48 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
             }
         }
     }
+
+    /**
+     * Selects a Row and perform an optional task on the Row. For example
+     * <code>setSelectedPosition(10, true, new ListRowPresenterSelectItemViewHolderTask(5))</code>
+     * Scroll to 11th row and selects 6th item on that row.  The method will be ignored if
+     * RowsSupportFragment has not been created (i.e. before {@link #onCreateView(LayoutInflater,
+     * ViewGroup, Bundle)}).
+     *
+     * @param rowPosition Which row to select.
+     * @param smooth True to scroll to the row, false for no animation.
+     * @param rowHolderTask Task to perform on the Row.
+     */
+    public void setSelectedPosition(int rowPosition, boolean smooth,
+            final Presenter.ViewHolderTask rowHolderTask) {
+        VerticalGridView verticalView = getVerticalGridView();
+        if (verticalView == null) {
+            return;
+        }
+        ViewHolderTask task = null;
+        if (rowHolderTask != null) {
+            task = new ViewHolderTask() {
+                @Override
+                public void run(RecyclerView.ViewHolder rvh) {
+                    rowHolderTask.run(getRowViewHolder((ItemBridgeAdapter.ViewHolder) rvh));
+                }
+            };
+        }
+        if (smooth) {
+            verticalView.setSelectedPositionSmooth(rowPosition, task);
+        } else {
+            verticalView.setSelectedPosition(rowPosition, task);
+        }
+    }
+
+    static RowPresenter.ViewHolder getRowViewHolder(ItemBridgeAdapter.ViewHolder ibvh) {
+        if (ibvh == null) {
+            return null;
+        }
+        RowPresenter rowPresenter = (RowPresenter) ibvh.getPresenter();
+        return rowPresenter.getRowViewHolder(ibvh.getViewHolder());
+    }
+
 
     @Override
     public boolean isScrolling() {

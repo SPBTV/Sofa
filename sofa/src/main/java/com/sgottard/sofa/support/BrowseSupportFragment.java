@@ -22,10 +22,13 @@ import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.support.annotation.ColorInt;
+import android.support.v17.leanback.transition.TransitionHelper;
 import android.support.v17.leanback.transition.TransitionListener;
 import android.support.v17.leanback.widget.BrowseFrameLayout;
 import android.support.v17.leanback.widget.HorizontalGridView;
 import android.support.v17.leanback.widget.ListRow;
+import android.support.v17.leanback.widget.ListRowPresenter;
 import android.support.v17.leanback.widget.ObjectAdapter;
 import android.support.v17.leanback.widget.OnItemViewClickedListener;
 import android.support.v17.leanback.widget.OnItemViewSelectedListener;
@@ -45,7 +48,6 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.ViewGroup.MarginLayoutParams;
 import static android.support.v7.widget.RecyclerView.NO_POSITION;
@@ -249,7 +251,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
 
     private static final String ARG_TITLE = BrowseSupportFragment.class.getCanonicalName() + ".title";
     private static final String ARG_BADGE_URI = BrowseSupportFragment.class.getCanonicalName() + ".badge";
-    private static final String ARG_HEADERS_STATE = BrowseSupportFragment.class.getCanonicalName() + ".headersState";
+    private static final String ARG_HEADERS_STATE =
+        BrowseSupportFragment.class.getCanonicalName() + ".headersState";
 
     /**
      * Creates arguments for a browse fragment.
@@ -278,7 +281,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
      *
      * @param color The color to use as the brand color of the fragment.
      */
-    public void setBrandColor(int color) {
+    public void setBrandColor(@ColorInt int color) {
         mBrandColor = color;
         mBrandColorSet = true;
 
@@ -291,6 +294,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
      * Returns the brand color for the browse fragment.
      * The default is transparent.
      */
+    @ColorInt
     public int getBrandColor() {
         return mBrandColor;
     }
@@ -349,8 +353,24 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     }
 
     /**
+     * Get currently bound RowsSupportFragment or null if BrowseSupportFragment has not been created yet.
+     * @return Currently bound RowsSupportFragment or null if BrowseSupportFragment has not been created yet.
+     */
+    public RowsSupportFragment getRowsSupportFragment() {
+        return mRowsSupportFragment;
+    }
+
+    /**
+     * Get currently bound HeadersSupportFragment or null if HeadersSupportFragment has not been created yet.
+     * @return Currently bound HeadersSupportFragment or null if HeadersSupportFragment has not been created yet.
+     */
+    public HeadersSupportFragment getHeadersSupportFragment() {
+        return mHeadersSupportFragment;
+    }
+
+    /**
      * Sets an item clicked listener on the fragment.
-     * OnItemViewClickedListener will override {@link OnClickListener} that
+     * OnItemViewClickedListener will override {@link View.OnClickListener} that
      * item presenter sets during {@link Presenter#onCreateViewHolder(ViewGroup)}.
      * So in general,  developer should choose one of the listeners but not both.
      */
@@ -436,15 +456,17 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         } else if (mCurrentFragment instanceof RowsSupportFragment) {
             target = (RowsSupportFragment) mCurrentFragment;
         }
+
         Runnable transitionRunnable = new Runnable() {
             @Override
             public void run() {
+                mHeadersSupportFragment.onTransitionPrepare();
                 mHeadersSupportFragment.onTransitionStart();
                 createHeadersTransition();
                 if (mBrowseTransitionListener != null) {
                     mBrowseTransitionListener.onHeadersTransitionStart(withHeaders);
                 }
-                sTransitionHelper.runTransition(withHeaders ? mSceneWithHeaders : mSceneWithoutHeaders,
+                TransitionHelper.runTransition(withHeaders ? mSceneWithHeaders : mSceneWithoutHeaders,
                         mHeadersTransition);
                 if (mHeadersBackStackEnabled) {
                     if (!withHeaders) {
@@ -692,19 +714,19 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             mHeadersSupportFragment.setBackgroundColor(mBrandColor);
         }
 
-        mSceneWithHeaders = sTransitionHelper.createScene(mBrowseFrame, new Runnable() {
+        mSceneWithHeaders = TransitionHelper.createScene(mBrowseFrame, new Runnable() {
             @Override
             public void run() {
                 showHeaders(true);
             }
         });
-        mSceneWithoutHeaders =  sTransitionHelper.createScene(mBrowseFrame, new Runnable() {
+        mSceneWithoutHeaders =  TransitionHelper.createScene(mBrowseFrame, new Runnable() {
             @Override
             public void run() {
                 showHeaders(false);
             }
         });
-        mSceneAfterEntranceTransition = sTransitionHelper.createScene(mBrowseFrame, new Runnable() {
+        mSceneAfterEntranceTransition = TransitionHelper.createScene(mBrowseFrame, new Runnable() {
             @Override
             public void run() {
                 setEntranceTransitionEndState();
@@ -714,11 +736,11 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     }
 
     private void createHeadersTransition() {
-        mHeadersTransition = sTransitionHelper.loadTransition(getActivity(),
+        mHeadersTransition = TransitionHelper.loadTransition(getActivity(),
                 mShowingHeaders ?
                 R.transition.lb_browse_headers_in : R.transition.lb_browse_headers_out);
 
-        sTransitionHelper.setTransitionListener(mHeadersTransition, new TransitionListener() {
+        TransitionHelper.addTransitionListener(mHeadersTransition, new TransitionListener() {
             @Override
             public void onTransitionStart(Object transition) {
                 mToggleTitleRunnable.post();
@@ -828,7 +850,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     private HeadersSupportFragment.OnHeaderClickedListener mHeaderClickedListener =
         new HeadersSupportFragment.OnHeaderClickedListener() {
             @Override
-            public void onHeaderClicked() {
+            public void onHeaderClicked(RowHeaderPresenter.ViewHolder viewHolder, Row row) {
                 if (!mCanShowHeaders || !mShowingHeaders || isInHeadersTransition()) {
                     return;
                 }
@@ -878,7 +900,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             new HeadersSupportFragment.OnHeaderViewSelectedListener() {
         @Override
         public void onHeaderSelected(RowHeaderPresenter.ViewHolder viewHolder, Row row) {
-            int position = mHeadersSupportFragment.getVerticalGridView().getSelectedPosition();
+            int position = mHeadersSupportFragment.getSelectedPosition();
             if (DEBUG) Log.v(TAG, "header selected position " + position);
 
             // switch fragments (if needed)
@@ -929,6 +951,10 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         if (position != NO_POSITION) {
             if (mRowsSupportFragment != null) {
                 mRowsSupportFragment.setSelectedPosition(position, smooth);
+            } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
+                ((RowsSupportFragment) mCurrentFragment).setSelectedPosition(position, smooth);
+            } else if (mCurrentFragment != null && mCurrentFragment instanceof VerticalGridSupportFragment) {
+                ((VerticalGridSupportFragment) mCurrentFragment).setSelectedPosition(position);
             }
             mHeadersSupportFragment.setSelectedPosition(position, smooth);
         }
@@ -943,11 +969,47 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     }
 
     /**
+     * Gets position of currently selected row.
+     * @return Position of currently selected row.
+     */
+    public int getSelectedPosition() {
+        return mSelectedPosition;
+    }
+
+    /**
      * Sets the selected row position.
      */
     public void setSelectedPosition(int position, boolean smooth) {
         mSetSelectionRunnable.post(
                 position, SetSelectionRunnable.TYPE_USER_REQUEST, smooth);
+    }
+
+    /**
+     * Selects a Row and perform an optional task on the Row. For example
+     * <code>setSelectedPosition(10, true, new ListRowPresenterSelectItemViewHolderTask(5))</code>
+     * scrolls to 11th row and selects 6th item on that row.  The method will be ignored if
+     * RowsSupportFragment has not been created (i.e. before {@link #onCreateView(LayoutInflater,
+     * ViewGroup, Bundle)}).
+     *
+     * @param rowPosition Which row to select.
+     * @param smooth True to scroll to the row, false for no animation.
+     * @param rowHolderTask Optional task to perform on the Row.  When the task is not null, headers
+     * fragment will be collapsed.
+     */
+    public void setSelectedPosition(int rowPosition, boolean smooth,
+            final Presenter.ViewHolderTask rowHolderTask) {
+        if (rowHolderTask != null && (mRowsSupportFragment != null || (mCurrentFragment != null && (
+                mCurrentFragment instanceof RowsSupportFragment
+                        || mCurrentFragment instanceof VerticalGridSupportFragment)))) {
+            startHeadersTransition(false);
+        }
+        if (mRowsSupportFragment != null) {
+            mRowsSupportFragment.setSelectedPosition(rowPosition, smooth, rowHolderTask);
+        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
+            ((RowsSupportFragment) mCurrentFragment).setSelectedPosition(rowPosition, smooth, rowHolderTask);
+        } else if (mCurrentFragment != null && mCurrentFragment instanceof VerticalGridSupportFragment) {
+            ((VerticalGridSupportFragment) mCurrentFragment).setSelectedPosition(rowPosition);
+        }
     }
 
     @Override
@@ -1055,6 +1117,54 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         }
     }
 
+    public boolean selectFirstItemInRow() {
+        int position = mHeadersSupportFragment.getVerticalGridView().getSelectedPosition();
+        if (DEBUG)
+            Log.v(TAG, "header selected position " + position);
+
+        // switch fragments (if needed)
+        if (mRowsSupportFragment == null) {
+            ContentFragment nextFragment = (ContentFragment) ((ListRow) mAdapter.get(
+                    position)).getAdapter().get(0);
+            FragmentManager cfManager = getChildFragmentManager();
+            Fragment foundFragment = cfManager.findFragmentById(R.id.browse_container_dock);
+            if (foundFragment != null) {
+                if (foundFragment instanceof RowsSupportFragment) {
+                    int selectedRow
+                            = ((RowsSupportFragment) foundFragment).getSelectedPosition();
+                    int selectedpositionInRow
+                            = ((RowsSupportFragment) foundFragment).getSelectedPositionInRow(selectedRow);
+                    if (selectedpositionInRow == 0) {
+                        return false;
+                    }
+                    ListRowPresenter.SelectItemViewHolderTask selectItemViewHolderTask = new
+                            ListRowPresenter.SelectItemViewHolderTask(0);
+                    selectItemViewHolderTask.setSmoothScroll(false);
+                    setSelectedPosition(selectedRow, false,
+                            selectItemViewHolderTask);
+                } else if (foundFragment instanceof VerticalGridSupportFragment) {
+                    int selectedColumn
+                            = ((VerticalGridSupportFragment) foundFragment).getSelectedColumn();
+                    if (selectedColumn == 0) {
+                        return false;
+                    }
+                    int selectedRow
+                            = ((VerticalGridSupportFragment) foundFragment).getSelectedRow();
+                    setSelectedPosition(
+                            ((VerticalGridSupportFragment) foundFragment).getFirstPositionInRow(
+                                    selectedRow), false);
+                }
+            }
+        } else {
+            int selectedRow = mRowsSupportFragment.getSelectedPosition();
+            ListRowPresenter.SelectItemViewHolderTask selectItemViewHolderTask = new
+                    ListRowPresenter.SelectItemViewHolderTask(0);
+            selectItemViewHolderTask.setSmoothScroll(false);
+            setSelectedPosition(selectedRow, false, selectItemViewHolderTask);
+        }
+        return true;
+    }
+
     /**
      * Sets the state for the headers column in the browse fragment. Must be one
      * of {@link #HEADERS_ENABLED}, {@link #HEADERS_HIDDEN}, or
@@ -1102,14 +1212,23 @@ public class BrowseSupportFragment extends BaseSupportFragment {
 
     @Override
     protected Object createEntranceTransition() {
-        return sTransitionHelper.loadTransition(getActivity(),
+        return TransitionHelper.loadTransition(getActivity(),
                 R.transition.lb_browse_entrance_transition);
     }
 
     @Override
     protected void runEntranceTransition(Object entranceTransition) {
-        sTransitionHelper.runTransition(mSceneAfterEntranceTransition,
-                entranceTransition);
+        TransitionHelper.runTransition(mSceneAfterEntranceTransition, entranceTransition);
+    }
+
+    @Override
+    protected void onEntranceTransitionPrepare() {
+        mHeadersSupportFragment.onTransitionPrepare();
+        if (mRowsSupportFragment != null) {
+            mRowsSupportFragment.onTransitionPrepare();
+        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
+            ((RowsSupportFragment) mCurrentFragment).onTransitionPrepare();
+        }
     }
 
     @Override
