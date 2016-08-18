@@ -903,6 +903,9 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             int position = mHeadersSupportFragment.getSelectedPosition();
             if (DEBUG) Log.v(TAG, "header selected position " + position);
 
+            if (getActivity() == null || getActivity().isFinishing() || getActivity().isDestroyed())
+                return;
+
             // switch fragments (if needed)
             if (mRowsSupportFragment == null) {
                 ContentFragment nextFragment = (ContentFragment) ((ListRow) mAdapter.get(position)).getAdapter().get(0);
