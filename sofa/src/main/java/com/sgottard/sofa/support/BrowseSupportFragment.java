@@ -919,7 +919,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                     }
                     FragmentTransaction transaction = cfManager.beginTransaction();
                     transaction.replace(R.id.browse_container_dock, (Fragment) nextFragment, nextFragment.getTag());
-                    transaction.commit();
+                    transaction.commitAllowingStateLoss();
                     mCurrentFragment = nextFragment;
                     if (nextFragment instanceof RowsSupportFragment) {
                         ((RowsSupportFragment) nextFragment).setOnItemViewSelectedListener(mRowViewSelectedListener);
@@ -954,10 +954,6 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         if (position != NO_POSITION) {
             if (mRowsSupportFragment != null) {
                 mRowsSupportFragment.setSelectedPosition(position, smooth);
-            } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-                ((RowsSupportFragment) mCurrentFragment).setSelectedPosition(position, smooth);
-            } else if (mCurrentFragment != null && mCurrentFragment instanceof VerticalGridSupportFragment) {
-                ((VerticalGridSupportFragment) mCurrentFragment).setSelectedPosition(position);
             }
             mHeadersSupportFragment.setSelectedPosition(position, smooth);
         }
@@ -973,6 +969,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
 
     /**
      * Gets position of currently selected row.
+     *
      * @return Position of currently selected row.
      */
     public int getSelectedPosition() {
@@ -1031,8 +1028,10 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             ((RowsSupportFragment) mCurrentFragment).setScalePivots(0, mContainerListAlignTop);
             ((RowsSupportFragment) mCurrentFragment).setOnItemViewSelectedListener(mRowViewSelectedListener);
             ((RowsSupportFragment) mCurrentFragment).setOnItemViewClickedListener(mOnItemViewClickedListener);
-        } else {
-            // FIXME handle custom content
+        } else if (mCurrentFragment != null && mCurrentFragment instanceof VerticalGridSupportFragment && !(
+                (VerticalGridSupportFragment) mCurrentFragment).isAdded()) {
+            ((VerticalGridSupportFragment) mCurrentFragment).setOnItemViewSelectedListener(mRowViewSelectedListener);
+            ((VerticalGridSupportFragment) mCurrentFragment).setOnItemViewClickedListener(mOnItemViewClickedListener);
         }
 
         if (mCanShowHeaders && mShowingHeaders && mHeadersSupportFragment.getView() != null) {
@@ -1127,8 +1126,6 @@ public class BrowseSupportFragment extends BaseSupportFragment {
 
         // switch fragments (if needed)
         if (mRowsSupportFragment == null) {
-            ContentFragment nextFragment = (ContentFragment) ((ListRow) mAdapter.get(
-                    position)).getAdapter().get(0);
             FragmentManager cfManager = getChildFragmentManager();
             Fragment foundFragment = cfManager.findFragmentById(R.id.browse_container_dock);
             if (foundFragment != null) {
