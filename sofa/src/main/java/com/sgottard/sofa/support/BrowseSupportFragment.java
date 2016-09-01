@@ -908,7 +908,12 @@ public class BrowseSupportFragment extends BaseSupportFragment {
 
             // switch fragments (if needed)
             if (mRowsSupportFragment == null) {
-                ContentFragment nextFragment = (ContentFragment) ((ListRow) mAdapter.get(position)).getAdapter().get(0);
+                Object listRowObject = ((ListRow) mAdapter.get(position)).getAdapter().get(0);
+                ContentFragment nextFragment = null;
+                if (listRowObject instanceof ContentFragment)
+                    nextFragment = (ContentFragment) listRowObject;
+                if (nextFragment == null)
+                    return;
                 FragmentManager cfManager = getChildFragmentManager();
                 Fragment foundFragment = cfManager.findFragmentById(R.id.browse_container_dock);
                 if (foundFragment == null || (foundFragment instanceof ContentFragment && !foundFragment.equals(nextFragment))) {
