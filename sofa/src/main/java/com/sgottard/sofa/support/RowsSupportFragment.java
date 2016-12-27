@@ -481,9 +481,15 @@ public class RowsSupportFragment extends BaseRowSupportFragment implements Conte
         }
 
         void execute() {
-            mVerticalView.getViewTreeObserver().addOnPreDrawListener(this);
-            setExpand(false);
-            mState = STATE_INIT;
+            if (mVerticalView == null) {
+                setExpand(true);
+                mCallback.run();
+                mState = STATE_SECOND_DRAW;
+            } else {
+                mVerticalView.getViewTreeObserver().addOnPreDrawListener(this);
+                setExpand(false);
+                mState = STATE_INIT;
+            }
         }
 
         @Override
