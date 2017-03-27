@@ -23,6 +23,7 @@ import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.annotation.ColorInt;
+import android.support.annotation.Nullable;
 import android.support.v17.leanback.transition.TransitionHelper;
 import android.support.v17.leanback.transition.TransitionListener;
 import android.support.v17.leanback.widget.BrowseFrameLayout;
@@ -50,6 +51,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.MarginLayoutParams;
+import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import static android.support.v7.widget.RecyclerView.NO_POSITION;
 
 /**
@@ -215,7 +218,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     /** The headers fragment is disabled and will never be shown. */
     public static final int HEADERS_DISABLED = 3;
 
-    private ContentFragment mCurrentFragment;
+    private WeakReference<? extends ContentFragment> currentFragmentRef;
     private RowsSupportFragment mRowsSupportFragment;
     protected HeadersSupportFragment mHeadersSupportFragment;
 
@@ -327,7 +330,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 mHeadersSupportFragment.setAdapter(adapter);
             }
 
-            mCurrentFragment = (ContentFragment) ((ListRow) firstElement).getAdapter().get(0);
+            currentFragmentRef = new WeakReference<>(
+                    (ContentFragment) ((ListRow) firstElement).getAdapter().get(0));
         }
     }
 
@@ -445,6 +449,11 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         }
     }
 
+    @Nullable
+    private ContentFragment getCurrentFragment() {
+        return currentFragmentRef == null ? null : currentFragmentRef.get();
+    }
+
     private void startHeadersTransitionInternal(final boolean withHeaders) {
         if (getFragmentManager().isDestroyed()) {
             return;
@@ -453,8 +462,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         RowsSupportFragment target = null;
         if (mRowsSupportFragment != null) {
             target = mRowsSupportFragment;
-        } else if (mCurrentFragment instanceof RowsSupportFragment) {
-            target = (RowsSupportFragment) mCurrentFragment;
+        } else if (getCurrentFragment() != null && getCurrentFragment() instanceof RowsSupportFragment) {
+            target = (RowsSupportFragment) getCurrentFragment();
         }
 
         Runnable transitionRunnable = new Runnable() {
@@ -495,16 +504,13 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         // don't run transition
         boolean isScrolling = (mHeadersSupportFragment.getVerticalGridView().getScrollState()
                 != HorizontalGridView.SCROLL_STATE_IDLE);
+        ContentFragment currentFragment = getCurrentFragment();
         if (mRowsSupportFragment != null) {
             isScrolling = isScrolling || mRowsSupportFragment.getVerticalGridView().getScrollState()
                     != HorizontalGridView.SCROLL_STATE_IDLE;
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof ContentFragment) {
-            isScrolling = isScrolling || mCurrentFragment.isScrolling();
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-            isScrolling = isScrolling || mRowsSupportFragment.getVerticalGridView().getScrollState()
-                    != HorizontalGridView.SCROLL_STATE_IDLE;
+        } else if (currentFragment != null) {
+            isScrolling = isScrolling || currentFragment.isScrolling();
         }
-
         return isScrolling;
     }
 
@@ -527,12 +533,13 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 if (mCanShowHeaders && mShowingHeaders) {
                     return mHeadersSupportFragment.getVerticalGridView();
                 } else {
+                    ContentFragment currentFragment = getCurrentFragment();
                     if (mRowsSupportFragment != null) {
                         return mRowsSupportFragment.getVerticalGridView();
-                    } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-                        return ((RowsSupportFragment) mCurrentFragment).getVerticalGridView();
-                    } else if (mCurrentFragment != null) {
-                        return mCurrentFragment.getFocusRootView();
+                    } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+                        return ((RowsSupportFragment) currentFragment).getVerticalGridView();
+                    } else if (currentFragment != null) {
+                        return currentFragment.getFocusRootView();
                     } else {
                         return null;
                     }
@@ -551,12 +558,13 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 if (isVerticalScrolling()) {
                     return focused;
                 }
+                ContentFragment currentFragment = getCurrentFragment();
                 if (mRowsSupportFragment != null) {
                     return mRowsSupportFragment.getVerticalGridView();
-                } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-                    return ((RowsSupportFragment) mCurrentFragment).getVerticalGridView();
-                } else if (mCurrentFragment != null) {
-                    return mCurrentFragment.getFocusRootView();
+                } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+                    return ((RowsSupportFragment) currentFragment).getVerticalGridView();
+                } else if (currentFragment != null) {
+                    return currentFragment.getFocusRootView();
                 } else {
                     return null;
                 }
@@ -585,18 +593,16 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                     mRowsSupportFragment.getView().requestFocus(direction, previouslyFocusedRect)) {
                 return true;
             }
-            if (mCurrentFragment != null && mCurrentFragment.getFocusRootView() != null &&
-                    mCurrentFragment.getFocusRootView().requestFocus(direction, previouslyFocusedRect)) {
+            ContentFragment currentFragment = getCurrentFragment();
+            if (currentFragment != null && currentFragment.getFocusRootView() != null &&
+                    currentFragment.getFocusRootView().requestFocus(direction, previouslyFocusedRect)) {
                 return true;
             }
-            if (getTitleView() != null &&
-                    getTitleView().requestFocus(direction, previouslyFocusedRect)) {
-                return true;
-            }
-            return false;
-        };
+            return getTitleView() != null && getTitleView().requestFocus(direction,
+                    previouslyFocusedRect);
+        }
 
-        @Override
+                @Override
         public void onRequestChildFocus(View child, View focused) {
             if (getChildFragmentManager().isDestroyed()) {
                 return;
@@ -664,7 +670,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             Bundle savedInstanceState) {
         if (getChildFragmentManager().findFragmentById(R.id.browse_container_dock) == null) {
             mHeadersSupportFragment = new HeadersSupportFragment();
-            if (mRowsSupportFragment== null && mCurrentFragment == null) {
+            ContentFragment currentFragment = getCurrentFragment();
+            if (mRowsSupportFragment== null && currentFragment == null) {
                 mRowsSupportFragment = new RowsSupportFragment();
                 getChildFragmentManager().beginTransaction()
                         .replace(R.id.browse_headers_dock, mHeadersSupportFragment)
@@ -672,7 +679,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             } else {
                 getChildFragmentManager().beginTransaction()
                         .replace(R.id.browse_headers_dock, mHeadersSupportFragment)
-                        .replace(R.id.browse_container_dock, (Fragment) mCurrentFragment).commit();
+                        .replace(R.id.browse_container_dock, (Fragment) currentFragment).commit();
             }
         } else {
             mHeadersSupportFragment = (HeadersSupportFragment) getChildFragmentManager()
@@ -682,7 +689,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             if (fragment instanceof RowsSupportFragment) {
                 mRowsSupportFragment = (RowsSupportFragment) fragment;
             } else {
-                mCurrentFragment = (ContentFragment) fragment;
+                currentFragmentRef = new WeakReference<>((ContentFragment) fragment);
             }
         }
 
@@ -748,10 +755,11 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             @Override
             public void onTransitionEnd(Object transition) {
                 mHeadersTransition = null;
+                ContentFragment currentFragment = getCurrentFragment();
                 if (mRowsSupportFragment != null) {
                     mRowsSupportFragment.onTransitionEnd();
-                } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-                    ((RowsSupportFragment) mCurrentFragment).onTransitionEnd();
+                } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+                    ((RowsSupportFragment) currentFragment).onTransitionEnd();
                 }
                 mHeadersSupportFragment.onTransitionEnd();
                 if (mShowingHeaders) {
@@ -763,10 +771,10 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                     VerticalGridView rowsGridView = null;
                     if (mRowsSupportFragment != null) {
                         rowsGridView = mRowsSupportFragment.getVerticalGridView();
-                    } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-                        rowsGridView = ((RowsSupportFragment) mCurrentFragment).getVerticalGridView();
-                    } else if (mCurrentFragment != null && mCurrentFragment instanceof VerticalGridSupportFragment) {
-                        rowsGridView = ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView();
+                    } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+                        rowsGridView = ((RowsSupportFragment) currentFragment).getVerticalGridView();
+                    } else if (currentFragment != null && currentFragment instanceof VerticalGridSupportFragment) {
+                        rowsGridView = ((VerticalGridSupportFragment) currentFragment).getVerticalGridView();
                     }
                     if (rowsGridView != null && !rowsGridView.hasFocus()) {
                         rowsGridView.requestFocus();
@@ -796,15 +804,18 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     private void setRowsAlignedLeft(boolean alignLeft) {
         ViewGroup.MarginLayoutParams lp;
         View containerList;
+        ContentFragment currentFragment = getCurrentFragment();
         if (mRowsSupportFragment != null) {
             containerList = mRowsSupportFragment.getView();
-            lp = (ViewGroup.MarginLayoutParams) containerList.getLayoutParams();
-            lp.setMarginStart(alignLeft ? 0 : mContainerListMarginStart);
-            containerList.setLayoutParams(lp);
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-            containerList = ((RowsSupportFragment) mCurrentFragment).getView();
+            if (containerList != null) {
+                lp = (ViewGroup.MarginLayoutParams) containerList.getLayoutParams();
+                lp.setMarginStart(alignLeft ? 0 : mContainerListMarginStart);
+                containerList.setLayoutParams(lp);
+            }
+        } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+            containerList = currentFragment.getView();
             if (containerList == null) {
-                mCurrentFragment.setExtraMargin(mContainerListAlignTop, mContainerListMarginStart);
+                currentFragment.setExtraMargin(mContainerListAlignTop, mContainerListMarginStart);
             } else {
                 lp = (ViewGroup.MarginLayoutParams) containerList.getLayoutParams();
                 if (lp != null) {
@@ -812,10 +823,10 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                     containerList.setLayoutParams(lp);
                 }
             }
-        } else {
-            containerList = mCurrentFragment.getView();
+        } else if (currentFragment != null) {
+            containerList = currentFragment.getView();
             if (containerList == null) {
-                mCurrentFragment.setExtraMargin(mContainerListAlignTop, mContainerListMarginStart);
+                currentFragment.setExtraMargin(mContainerListAlignTop, mContainerListMarginStart);
             } else {
                 lp = (ViewGroup.MarginLayoutParams) containerList.getLayoutParams();
                 if (lp != null) {
@@ -840,10 +851,11 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         mHeadersSupportFragment.setHeadersEnabled(show);
         setHeadersOnScreen(show);
         setRowsAlignedLeft(!show);
+        ContentFragment currentFragment = getCurrentFragment();
         if (mRowsSupportFragment != null) {
             mRowsSupportFragment.setExpand(true);
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-            ((RowsSupportFragment) mCurrentFragment).setExpand(true);
+        } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+            ((RowsSupportFragment) currentFragment).setExpand(true);
         }
     }
 
@@ -854,15 +866,16 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 if (!mCanShowHeaders || !mShowingHeaders || isInHeadersTransition()) {
                     return;
                 }
+                ContentFragment currentFragment = getCurrentFragment();
                 if (mRowsSupportFragment != null) {
                     startHeadersTransitionInternal(false);
                     mRowsSupportFragment.getVerticalGridView().requestFocus();
-                } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
+                } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
                     startHeadersTransitionInternal(false);
-                    ((RowsSupportFragment) mCurrentFragment).getVerticalGridView().requestFocus();
-                } else if (mCurrentFragment != null && mCurrentFragment.getFocusRootView() != null) {
+                    ((RowsSupportFragment) currentFragment).getVerticalGridView().requestFocus();
+                } else if (currentFragment != null && currentFragment.getFocusRootView() != null) {
                     startHeadersTransitionInternal(false);
-                    mCurrentFragment.getFocusRootView().requestFocus();
+                    currentFragment.getFocusRootView().requestFocus();
                 }
             }
         };
@@ -872,20 +885,24 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         public void onItemSelected(Presenter.ViewHolder itemViewHolder, Object item,
                 RowPresenter.ViewHolder rowViewHolder, Row row) {
             int position = -1;
+            ContentFragment currentFragment = getCurrentFragment();
             if (mRowsSupportFragment != null) {
                 position = mRowsSupportFragment.getVerticalGridView().getSelectedPosition();
                 onRowSelected(position);
-            } else if (mCurrentFragment != null
-                    && mCurrentFragment instanceof RowsSupportFragment
-                    && ((RowsSupportFragment) mCurrentFragment).getVerticalGridView() != null) {
-                position = ((RowsSupportFragment) mCurrentFragment).getVerticalGridView().getSelectedPosition();
+            } else if (currentFragment != null
+                    && currentFragment instanceof RowsSupportFragment
+                    && ((RowsSupportFragment) currentFragment).getVerticalGridView() != null) {
+                position = ((RowsSupportFragment) currentFragment).getVerticalGridView().getSelectedPosition();
                 mToggleTitleRunnable.post();
-            } else if (mCurrentFragment != null
-                    && mCurrentFragment instanceof VerticalGridSupportFragment
-                    && ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView()
+            } else if (currentFragment != null
+                    && currentFragment instanceof VerticalGridSupportFragment
+                    && ((VerticalGridSupportFragment) currentFragment).getVerticalGridView()
                     != null) {
-                position = ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView()
-                        .getSelectedPosition();
+                VerticalGridView grid
+                        = ((VerticalGridSupportFragment) currentFragment).getVerticalGridView();
+                if (grid != null) {
+                    position = grid.getSelectedPosition();
+                }
                 mToggleTitleRunnable.post();
             }
             if (DEBUG) Log.v(TAG, "row selected position " + position);
@@ -924,8 +941,9 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                     }
                     FragmentTransaction transaction = cfManager.beginTransaction();
                     transaction.replace(R.id.browse_container_dock, (Fragment) nextFragment, nextFragment.getTag());
-                    transaction.commitAllowingStateLoss();
-                    mCurrentFragment = nextFragment;
+                    transaction.commit();
+
+                    currentFragmentRef = new WeakReference<>(nextFragment);
                     if (nextFragment instanceof RowsSupportFragment) {
                         ((RowsSupportFragment) nextFragment).setOnItemViewSelectedListener(mRowViewSelectedListener);
                         ((RowsSupportFragment) nextFragment).setOnItemViewClickedListener(mOnItemViewClickedListener);
@@ -1003,40 +1021,42 @@ public class BrowseSupportFragment extends BaseSupportFragment {
      */
     public void setSelectedPosition(int rowPosition, boolean smooth,
             final Presenter.ViewHolderTask rowHolderTask) {
-        if (rowHolderTask != null && (mRowsSupportFragment != null || (mCurrentFragment != null && (
-                mCurrentFragment instanceof RowsSupportFragment
-                        || mCurrentFragment instanceof VerticalGridSupportFragment)))) {
+        ContentFragment currentFragment = getCurrentFragment();
+        if (rowHolderTask != null && (mRowsSupportFragment != null || (currentFragment != null && (
+                currentFragment instanceof RowsSupportFragment
+                        || currentFragment instanceof VerticalGridSupportFragment)))) {
             startHeadersTransition(false);
         }
         if (mRowsSupportFragment != null) {
             mRowsSupportFragment.setSelectedPosition(rowPosition, smooth, rowHolderTask);
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-            ((RowsSupportFragment) mCurrentFragment).setSelectedPosition(rowPosition, smooth, rowHolderTask);
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof VerticalGridSupportFragment) {
-            ((VerticalGridSupportFragment) mCurrentFragment).setSelectedPosition(rowPosition);
+        } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+            ((RowsSupportFragment) currentFragment).setSelectedPosition(rowPosition, smooth, rowHolderTask);
+        } else if (currentFragment != null && currentFragment instanceof VerticalGridSupportFragment) {
+            ((VerticalGridSupportFragment) currentFragment).setSelectedPosition(rowPosition);
         }
     }
 
     @Override
     public void onStart() {
         super.onStart();
+        ContentFragment currentFragment = getCurrentFragment();
         mHeadersSupportFragment.setWindowAlignmentFromTop(mContainerListAlignTop);
         mHeadersSupportFragment.setItemAlignment();
         if (mRowsSupportFragment != null) {
             mRowsSupportFragment.setWindowAlignmentFromTop(mContainerListAlignTop);
             mRowsSupportFragment.setItemAlignment();
             mRowsSupportFragment.setScalePivots(0, mContainerListAlignTop);
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment && !(
-                (RowsSupportFragment) mCurrentFragment).isAdded()) {
-            ((RowsSupportFragment) mCurrentFragment).setWindowAlignmentFromTop(mContainerListAlignTop);
-            ((RowsSupportFragment) mCurrentFragment).setItemAlignment();
-            ((RowsSupportFragment) mCurrentFragment).setScalePivots(0, mContainerListAlignTop);
-            ((RowsSupportFragment) mCurrentFragment).setOnItemViewSelectedListener(mRowViewSelectedListener);
-            ((RowsSupportFragment) mCurrentFragment).setOnItemViewClickedListener(mOnItemViewClickedListener);
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof VerticalGridSupportFragment && !(
-                (VerticalGridSupportFragment) mCurrentFragment).isAdded()) {
-            ((VerticalGridSupportFragment) mCurrentFragment).setOnItemViewSelectedListener(mRowViewSelectedListener);
-            ((VerticalGridSupportFragment) mCurrentFragment).setOnItemViewClickedListener(mOnItemViewClickedListener);
+        } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment && !(
+                (RowsSupportFragment) currentFragment).isAdded()) {
+            ((RowsSupportFragment) currentFragment).setWindowAlignmentFromTop(mContainerListAlignTop);
+            ((RowsSupportFragment) currentFragment).setItemAlignment();
+            ((RowsSupportFragment) currentFragment).setScalePivots(0, mContainerListAlignTop);
+            ((RowsSupportFragment) currentFragment).setOnItemViewSelectedListener(mRowViewSelectedListener);
+            ((RowsSupportFragment) currentFragment).setOnItemViewClickedListener(mOnItemViewClickedListener);
+        } else if (currentFragment != null && currentFragment instanceof VerticalGridSupportFragment && !(
+                (VerticalGridSupportFragment) currentFragment).isAdded()) {
+            ((VerticalGridSupportFragment) currentFragment).setOnItemViewSelectedListener(mRowViewSelectedListener);
+            ((VerticalGridSupportFragment) currentFragment).setOnItemViewClickedListener(mOnItemViewClickedListener);
         }
 
         if (mCanShowHeaders && mShowingHeaders && mHeadersSupportFragment.getView() != null) {
@@ -1044,8 +1064,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         } else if (!mCanShowHeaders || !mShowingHeaders) {
             if (mRowsSupportFragment!= null && mRowsSupportFragment.getView() != null) {
                 mRowsSupportFragment.getView().requestFocus();
-            } else if (mCurrentFragment != null && mCurrentFragment.getFocusRootView() != null) {
-                mCurrentFragment.getFocusRootView().requestFocus();
+            } else if (currentFragment != null && currentFragment.getFocusRootView() != null) {
+                currentFragment.getFocusRootView().requestFocus();
             }
         }
         if (mCanShowHeaders) {
@@ -1229,20 +1249,22 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     @Override
     protected void onEntranceTransitionPrepare() {
         mHeadersSupportFragment.onTransitionPrepare();
+        ContentFragment currentFragment = getCurrentFragment();
         if (mRowsSupportFragment != null) {
             mRowsSupportFragment.onTransitionPrepare();
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-            ((RowsSupportFragment) mCurrentFragment).onTransitionPrepare();
+        } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+            ((RowsSupportFragment) currentFragment).onTransitionPrepare();
         }
     }
 
     @Override
     protected void onEntranceTransitionStart() {
         mHeadersSupportFragment.onTransitionStart();
+        ContentFragment currentFragment = getCurrentFragment();
         if (mRowsSupportFragment != null) {
             mRowsSupportFragment.onTransitionEnd();
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-            ((RowsSupportFragment) mCurrentFragment).onTransitionStart();
+        } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+            ((RowsSupportFragment) currentFragment).onTransitionStart();
         }
     }
 
@@ -1262,20 +1284,22 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     void setEntranceTransitionStartState() {
         setHeadersOnScreen(false);
         setSearchOrbViewOnScreen(false);
+        ContentFragment currentFragment = getCurrentFragment();
         if (mRowsSupportFragment != null) {
             mRowsSupportFragment.setEntranceTransitionState(false);
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-            ((RowsSupportFragment) mCurrentFragment).setEntranceTransitionState(false);
+        } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+            ((RowsSupportFragment) currentFragment).setEntranceTransitionState(false);
         }
     }
 
     void setEntranceTransitionEndState() {
         setHeadersOnScreen(mShowingHeaders);
         setSearchOrbViewOnScreen(true);
+        ContentFragment currentFragment = getCurrentFragment();
         if (mRowsSupportFragment != null) {
             mRowsSupportFragment.setEntranceTransitionState(true);
-        } else if (mCurrentFragment != null && mCurrentFragment instanceof RowsSupportFragment) {
-            ((RowsSupportFragment) mCurrentFragment).setEntranceTransitionState(true);
+        } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
+            ((RowsSupportFragment) currentFragment).setEntranceTransitionState(true);
         }
     }
 
@@ -1291,17 +1315,18 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             return;
         VerticalGridView headerVerticalGridView = mHeadersSupportFragment.getVerticalGridView();
         int rowsPosition = 0;
+        ContentFragment currentFragment = getCurrentFragment();
         if (mRowsSupportFragment != null && mRowsSupportFragment.getVerticalGridView() != null) {
             rowsPosition = mRowsSupportFragment.getVerticalGridView().getSelectedPosition();
-        } else if (mCurrentFragment != null
-                && mCurrentFragment instanceof RowsSupportFragment
-                && ((RowsSupportFragment) mCurrentFragment).getVerticalGridView() != null) {
-            rowsPosition = ((RowsSupportFragment) mCurrentFragment).getVerticalGridView()
+        } else if (currentFragment != null
+                && currentFragment instanceof RowsSupportFragment
+                && ((RowsSupportFragment) currentFragment).getVerticalGridView() != null) {
+            rowsPosition = ((RowsSupportFragment) currentFragment).getVerticalGridView()
                     .getSelectedPosition();
-        } else if (mCurrentFragment != null
-                && mCurrentFragment instanceof VerticalGridSupportFragment
-                && ((VerticalGridSupportFragment) mCurrentFragment).getVerticalGridView() != null) {
-            rowsPosition = ((VerticalGridSupportFragment) mCurrentFragment).getSelectedRow();
+        } else if (currentFragment != null
+                && currentFragment instanceof VerticalGridSupportFragment
+                && ((VerticalGridSupportFragment) currentFragment).getVerticalGridView() != null) {
+            rowsPosition = ((VerticalGridSupportFragment) currentFragment).getSelectedRow();
         }
         boolean isFirstChildIntersectWithTitle = getTitleView() != null
                 && headerVerticalGridView.getChildCount() != 0 &&
