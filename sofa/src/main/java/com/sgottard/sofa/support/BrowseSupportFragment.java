@@ -51,7 +51,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.MarginLayoutParams;
-import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import static android.support.v7.widget.RecyclerView.NO_POSITION;
 
@@ -924,7 +923,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                 return;
 
             // switch fragments (if needed)
-            if (mRowsSupportFragment == null) {
+            if (mRowsSupportFragment == null && mAdapter.size() > position
+                    && ((ListRow) mAdapter.get(position)).getAdapter().size() > 0) {
                 Object listRowObject = ((ListRow) mAdapter.get(position)).getAdapter().get(0);
                 ContentFragment nextFragment = null;
                 if (listRowObject instanceof ContentFragment)
