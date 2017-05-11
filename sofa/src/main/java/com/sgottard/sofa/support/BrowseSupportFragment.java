@@ -741,6 +741,14 @@ public class BrowseSupportFragment extends BaseSupportFragment {
         return root;
     }
 
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (mHeadersSupportFragment != null) {
+            mHeadersSupportFragment.setOnHeaderViewSelectedListener(null);
+        }
+    }
+
     private void createHeadersTransition() {
         mHeadersTransition = TransitionHelper.loadTransition(getActivity(),
                 mShowingHeaders ?
