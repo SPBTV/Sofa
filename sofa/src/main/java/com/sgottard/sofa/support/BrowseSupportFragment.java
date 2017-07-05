@@ -933,6 +933,7 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             // switch fragments (if needed)
             if (mRowsSupportFragment == null && mAdapter.size() > position
                     && ((ListRow) mAdapter.get(position)).getAdapter().size() > 0) {
+                onMainHeaderPrepareSelection(position);
                 Object listRowObject = ((ListRow) mAdapter.get(position)).getAdapter().get(0);
                 ContentFragment nextFragment = null;
                 if (listRowObject instanceof ContentFragment)
@@ -971,6 +972,9 @@ public class BrowseSupportFragment extends BaseSupportFragment {
     };
 
     public void onMainHeaderSelected(int position) {
+    }
+
+    public void onMainHeaderPrepareSelection(int position) {
     }
 
     public void onRowSelected(int position) {
