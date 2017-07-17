@@ -878,8 +878,11 @@ public class BrowseSupportFragment extends BaseSupportFragment {
                     startHeadersTransitionInternal(false);
                     mRowsSupportFragment.getVerticalGridView().requestFocus();
                 } else if (currentFragment != null && currentFragment instanceof RowsSupportFragment) {
-                    startHeadersTransitionInternal(false);
-                    ((RowsSupportFragment) currentFragment).getVerticalGridView().requestFocus();
+                    ObjectAdapter adapter = ((RowsSupportFragment) currentFragment).getAdapter();
+                    if (adapter != null && adapter.size() > 0) {
+                        startHeadersTransitionInternal(false);
+                        ((RowsSupportFragment) currentFragment).getVerticalGridView().requestFocus();
+                    }
                 } else if (currentFragment != null && currentFragment.getFocusRootView() != null) {
                     startHeadersTransitionInternal(false);
                     currentFragment.getFocusRootView().requestFocus();
