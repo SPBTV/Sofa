@@ -51,6 +51,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.MarginLayoutParams;
+import android.widget.FrameLayout;
 import java.lang.ref.WeakReference;
 import static android.support.v7.widget.RecyclerView.NO_POSITION;
 
@@ -609,7 +610,19 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             if (!mCanShowHeaders || isInHeadersTransition()) return;
             int childId = child.getId();
             if (childId == R.id.browse_container_dock && mShowingHeaders) {
-                startHeadersTransitionInternal(false);
+                ContentFragment currentFragment = getCurrentFragment();
+                if (currentFragment instanceof RowsSupportFragment) {
+                    ObjectAdapter adapter = ((RowsSupportFragment) currentFragment).getAdapter();
+                    if (adapter != null && adapter.size() > 0) {
+                        startHeadersTransitionInternal(false);
+                    } else {
+                        int position = mHeadersSupportFragment.getSelectedPosition();
+                        mHeadersSupportFragment.getVerticalGridView().getChildAt(position)
+                                .requestFocus();
+                    }
+                } else {
+                    startHeadersTransitionInternal(false);
+                }
             } else if (childId == R.id.browse_headers_dock && !mShowingHeaders) {
                 startHeadersTransitionInternal(true);
             }
