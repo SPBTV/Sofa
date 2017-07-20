@@ -943,7 +943,8 @@ public class BrowseSupportFragment extends BaseSupportFragment {
             int position = mHeadersSupportFragment.getSelectedPosition();
             if (DEBUG) Log.v(TAG, "header selected position " + position);
 
-            if (getActivity() == null || getActivity().isFinishing() || getActivity().isDestroyed())
+            if (getActivity() == null || getActivity().isFinishing() || getActivity().isDestroyed
+                    () || !isResumed())
                 return;
 
             // switch fragments (if needed)
