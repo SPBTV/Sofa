@@ -222,9 +222,17 @@ public class VerticalGridSupportFragment extends BaseSupportFragment implements 
      * Sets the selected item position.
      */
     public void setSelectedPosition(int position) {
+        setSelectedPosition(position, true);
+    }
+
+    public void setSelectedPosition(int position, boolean smooth) {
         mSelectedPosition = position;
         if (mGridViewHolder != null && mGridViewHolder.getGridView().getAdapter() != null) {
-            mGridViewHolder.getGridView().setSelectedPositionSmooth(position);
+            if (smooth) {
+                mGridViewHolder.getGridView().setSelectedPositionSmooth(position);
+            } else {
+                mGridViewHolder.getGridView().setSelectedPosition(position);
+            }
         }
     }
 
