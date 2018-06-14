@@ -18,18 +18,6 @@ android {
     }
 }
 
-def archivesBaseName = 'sofa'
-
-android.libraryVariants.all { variant ->
-    variant.outputs.each { output ->
-        def outputFile = output.outputFile
-        if (outputFile != null && outputFile.name.endsWith('.aar')) {
-            def fileName = "${archivesBaseName}-${version}.aar"
-            output.outputFile = new File(outputFile.parent, fileName)
-        }
-    }
-}
-
 dependencies {
     implementation "com.android.support:recyclerview-v7:${supportLibsVersion}"
     implementation "com.android.support:leanback-v17:${supportLibsVersion}"
